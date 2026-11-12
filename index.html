@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satria Mudha Wayang Quest - Gamifikasi Interaktif</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Special Elite, Pangolin, & Courier Prime for playful vintage detective look -->
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Pangolin&family=Special+Elite&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <script>
+        /* ==================== GLOBAL EARLY DECLARATION FOR INLINE HTML EVENT HANDLERS ==================== */
+        function handleSilhouetteError(imgEl) {
+            if (!imgEl) return;
+            // Fallback SVG silhouette vector so image stays visible continuously
+            const fallbackSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 250" fill="%231a0f0a"><path d="M100 20 C70 20 60 45 65 65 C55 60 45 75 55 90 C45 95 40 115 60 120 C50 140 70 160 85 155 C75 175 80 200 70 230 L130 230 C120 200 125 175 115 155 C130 160 150 140 140 120 C160 115 155 95 145 90 C155 75 145 60 135 65 C140 45 130 20 100 20 Z" /><circle cx="100" cy="50" r="8" fill="%23fef3c7"/><rect x="85" y="210" width="30" height="25" fill="%234a2c11"/></svg>`;
+            imgEl.onerror = null; // Prevent infinite fallback loops
+            imgEl.src = fallbackSvg;
+            if (!imgEl.classList.contains('revealed-img')) {
+                imgEl.classList.add('silhouetted-img');
+            }
+        }
+
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        parchment: '#f4ebd0',
+                        parchmentDark: '#e6d7b2',
+                        vintageRed: '#a83232',
+                        woodBrown: '#4a2c11',
+                        leatherDark: '#2b1810',
+                        badgeGold: '#d4af37'
+                    },
+                    fontFamily: {
+                        detective: ['"Special Elite"', 'monospace'],
+                        playful: ['"Pangolin"', 'cursive'],
+                        typewriter: ['"Courier Prime"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #1a0f0a;
+            background-image: 
+                radial-gradient(rgba(212, 175, 55, 0.15) 1px, transparent 0),
+                radial-gradient(#4a2c11 1.5px, transparent 0);
+            background-size: 32px 32px, 16px 16px;
+            background-position: 0 0, 8px 8px;
+            font-family: 'Pangolin', cursive;
+            user-select: none;
+        }
+
+        /* Enhanced Parchment Texture Style */
+        .parchment-card {
+            background: linear-gradient(135deg, #fceecb 0%, #f4ebd0 50%, #e8d7ad 100%);
+            box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.7), inset 0 0 50px rgba(139, 69, 19, 0.25);
+            border: 3px solid #b89b72;
+            position: relative;
+        }
+
+        /* Tape Effect */
+        .tape {
+            background-color: rgba(240, 230, 190, 0.85);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            backdrop-filter: blur(2px);
+            border-left: 2px dashed rgba(180, 150, 100, 0.5);
+            border-right: 2px dashed rgba(180, 150, 100, 0.5);
+        }
+
+        /* Confidential Stamp */
+        .stamp-confidential {
+            color: #b91c1c;
+            border: 4px double #b91c1c;
+            transform: rotate(-6deg);
+            font-family: 'Special Elite', monospace;
+            text-shadow: 0 0 2px rgba(185, 28, 28, 0.4);
+            letter-spacing: 2px;
+            background: rgba(254, 226, 226, 0.4);
+            box-shadow: 0 2px 8px rgba(185, 28, 28, 0.15);
+        }
+
+        /* Red String Canvas Overlay */
+        #stringCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        /* Push Pin */
+        .push-pin {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #ff5555, #b91c1c 60%, #581c87);
+            box-shadow: 2px 4px 6px rgba(0,0,0,0.5), inset -2px -2px 3px rgba(0,0,0,0.6);
+        }
+
+        /* Glow effects */
+        .glow-active {
+            box-shadow: 0 0 25px rgba(234, 179, 8, 0.8), 0 0 10px rgba(234, 179, 8, 0.4);
+            border-color: #f59e0b;
+        }
+
+        /* Investigation Buttons */
+        .investigation-btn {
+            background: linear-gradient(180deg, #3d2314 0%, #2b1810 100%);
+            border: 2px solid #92400e;
+            color: #fef3c7;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .investigation-btn:hover {
+            background: linear-gradient(180deg, #4a2c11 0%, #371e13 100%);
+            border-color: #f59e0b;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.4), 0 0 12px rgba(245, 158, 11, 0.3);
+        }
+        .investigation-btn:active {
+            transform: translateY(1px);
+        }
+
+        /* Option Button Card */
+        .detective-choice-btn {
+            background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+            border: 2px solid #b45309;
+            color: #451a03;
+            box-shadow: 0 4px 8px rgba(69, 26, 3, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            transition: all 0.2s ease;
+        }
+        .detective-choice-btn:hover {
+            background: linear-gradient(180deg, #fef3c7 0%, #fde68a 100%);
+            border-color: #d97706;
+            transform: scale(1.03);
+            box-shadow: 0 6px 14px rgba(180, 83, 9, 0.25);
+        }
+
+        /* Animations */
+        @keyframes pulseSlow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .pulse-animation {
+            animation: pulseSlow 2.5s infinite ease-in-out;
+        }
+
+        /* Bubble Notification Popup Animation */
+        @keyframes bubblePopIn {
+            0% { opacity: 0; transform: translate(-50%, -20px) scale(0.8); }
+            50% { transform: translate(-50%, 5px) scale(1.05); }
+            100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+        }
+        .bubble-notification {
+            animation: bubblePopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* Progressive Gradient & Closeup Silhouette Reveal Clip-Paths (20%, 50%, 70%, 100%) */
+        .reveal-20 {
+            clip-path: circle(18% at 50% 40%);
+            transform: scale(1.8);
+            filter: brightness(0.55) contrast(220%) drop-shadow(0 0 10px rgba(234, 179, 8, 0.5));
+            mask-image: radial-gradient(circle at 50% 40%, rgba(0,0,0,1) 20%, rgba(0,0,0,0.1) 60%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle at 50% 40%, rgba(0,0,0,1) 20%, rgba(0,0,0,0.1) 60%, transparent 100%);
+        }
+        .reveal-50 {
+            clip-path: circle(38% at 50% 45%);
+            transform: scale(1.5);
+            filter: brightness(0.68) contrast(180%) drop-shadow(0 0 12px rgba(234, 179, 8, 0.6));
+            mask-image: radial-gradient(circle at 50% 45%, rgba(0,0,0,1) 40%, rgba(0,0,0,0.2) 75%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle at 50% 45%, rgba(0,0,0,1) 40%, rgba(0,0,0,0.2) 75%, transparent 100%);
+        }
+        .reveal-70 {
+            clip-path: circle(60% at 50% 50%);
+            transform: scale(1.25);
+            filter: brightness(0.82) contrast(145%) drop-shadow(0 0 16px rgba(234, 179, 8, 0.75));
+            mask-image: radial-gradient(circle at 50% 50%, rgba(0,0,0,1) 65%, rgba(0,0,0,0.4) 90%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle at 50% 50%, rgba(0,0,0,1) 65%, rgba(0,0,0,0.4) 90%, transparent 100%);
+        }
+        .reveal-100 {
+            clip-path: circle(100% at 50% 50%);
+            transform: scale(1.0);
+            filter: brightness(1) contrast(110%) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+            mask-image: none;
+            -webkit-mask-image: none;
+        }
+        
+        .revealed-img {
+            filter: brightness(1) contrast(110%) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4)) !important;
+            transform: scale(1.05) !important;
+            clip-path: circle(100% at 50% 50%) !important;
+            mask-image: none !important;
+            -webkit-mask-image: none !important;
+            transition: filter 0.6s ease, transform 0.5s ease, clip-path 0.5s ease;
+        }
+
+        /* Detective Magnifying Glass Realistic Frame */
+        .magnifier-outer-frame {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #d4af37 0%, #85581A 40%, #4a2c11 70%, #d4af37 100%);
+            box-shadow: 
+                0 15px 30px rgba(0, 0, 0, 0.6),
+                inset 0 3px 6px rgba(255, 255, 255, 0.6),
+                inset 0 -4px 8px rgba(0, 0, 0, 0.8);
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .magnifier-lens-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 50% 50%, #fefce8 0%, #fef3c7 60%, #eab308 100%);
+            border: 4px solid #371e13;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Glass Shine Overlay */
+        .magnifier-lens-inner::before {
+            content: '';
+            position: absolute;
+            top: 5%;
+            left: 15%;
+            width: 70%;
+            height: 35%;
+            border-radius: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 100%);
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        /* Magnifier Handle */
+        .magnifier-handle {
+            position: absolute;
+            bottom: -55px;
+            right: -25px;
+            width: 32px;
+            height: 110px;
+            background: linear-gradient(90deg, #2b1810 0%, #5c3a21 50%, #1a0f0a 100%);
+            border-radius: 12px;
+            border: 3px solid #85581A;
+            transform: rotate(-45deg);
+            transform-origin: top center;
+            box-shadow: 5px 10px 20px rgba(0,0,0,0.6);
+            z-index: 5;
+        }
+        .magnifier-handle::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 12px;
+            background: linear-gradient(90deg, #d4af37, #fef08a, #85581A);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col justify-between p-2 md:p-6 overflow-x-hidden">
+
+    <!-- TOP HEADER & LEADERBOARD BAR -->
+    <header class="max-w-7xl w-full mx-auto mb-4">
+        <div class="bg-gradient-to-r from-amber-950 via-woodBrown to-amber-950 border-4 border-amber-700 rounded-2xl p-3 shadow-2xl text-amber-100 flex flex-col lg:flex-row justify-between items-center gap-4">
+            <!-- Title & Badge Info -->
+            <div class="flex items-center space-x-3">
+                <div class="w-13 h-13 p-2 bg-gradient-to-br from-amber-300 via-badgeGold to-amber-600 rounded-full flex items-center justify-center text-woodBrown text-2xl shadow-xl border-2 border-amber-100 pulse-animation">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <div>
+                    <h1 class="font-detective text-xl md:text-2xl font-bold tracking-wider text-amber-200 drop-shadow">SATRIYA MUDHA WAYANG QUEST</h1>
+                    <p class="text-xs text-amber-300/90 font-typewriter">Gamifikasi Analisis Tokoh Wayang Pandawa & Kurawa • Mode Investigasi</p>
+                </div>
+            </div>
+
+            <!-- Group Leaderboard Summary Bar -->
+            <div class="grid grid-cols-5 gap-2 w-full lg:w-auto" id="group-score-cards">
+                <!-- Cards populated via JS -->
+            </div>
+
+            <!-- Sound & Fullscreen Controls -->
+            <div class="flex items-center gap-2">
+                <button onclick="toggleAudio()" id="audioBtn" class="investigation-btn px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1">
+                    <i class="fa-solid fa-volume-high" id="audioIcon"></i>
+                </button>
+                <button onclick="toggleFullscreen()" class="investigation-btn px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Group Turn Switcher Bar -->
+        <div class="mt-2 bg-amber-950/90 backdrop-blur rounded-xl p-2.5 flex flex-wrap items-center justify-between border-2 border-amber-800/80 shadow-lg">
+            <div class="text-xs text-amber-300 font-bold px-2 flex items-center gap-2 font-detective tracking-wider">
+                <i class="fa-solid fa-user-secret text-amber-400 text-sm"></i> KELOMPOK AKTIF MENJAWAB:
+            </div>
+            <div class="flex flex-wrap gap-1 md:gap-2 text-xs font-bold" id="turn-selector-container">
+                <!-- Group selector buttons populated by JS -->
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN GAME STAGE CONTAINER -->
+    <main class="max-w-7xl w-full mx-auto flex-1 flex flex-col justify-center relative my-2">
+        
+        <!-- LEVEL TABS NAVIGATION -->
+        <div class="flex justify-center gap-2 mb-3">
+            <button onclick="switchLevel(1)" id="tab-lvl-1" class="px-5 py-2.5 rounded-t-xl font-detective font-bold text-sm md:text-base border-t-2 border-x-2 transition-all duration-200 flex items-center gap-2">
+                <i class="fa-solid fa-eye-low-vision"></i> Level 1: Waspada Gambar
+            </button>
+            <button onclick="switchLevel(2)" id="tab-lvl-2" class="px-5 py-2.5 rounded-t-xl font-detective font-bold text-sm md:text-base border-t-2 border-x-2 transition-all duration-200 flex items-center gap-2">
+                <i class="fa-solid fa-diagram-project"></i> Level 2: Golek Gaman & Praja
+            </button>
+            <button onclick="switchLevel(3)" id="tab-lvl-3" class="px-5 py-2.5 rounded-t-xl font-detective font-bold text-sm md:text-base border-t-2 border-x-2 transition-all duration-200 flex items-center gap-2">
+                <i class="fa-solid fa-trophy"></i> Level 3: Arena Jawara
+            </button>
+        </div>
+
+        <!-- ==================== LEVEL 1: WASPADA GAMBAR ==================== -->
+        <section id="level-1-container" class="parchment-card rounded-2xl p-4 md:p-8 relative min-h-[540px] flex flex-col justify-between shadow-2xl">
+            <!-- Confidential Stamp Header -->
+            <div class="flex flex-wrap justify-between items-start border-b-2 border-amber-900/30 pb-4 gap-4">
+                <div>
+                    <div class="stamp-confidential inline-block px-3 py-1 font-bold text-xl md:text-2xl mb-1">
+                        MISI 1 : WASPADA GAMBAR
+                    </div>
+                    <h2 class="font-detective text-xl md:text-3xl text-woodBrown font-bold">Analisis Siluet Close-Up Tokoh Wayang</h2>
+                    <p class="text-sm md:text-base text-amber-900/90 font-typewriter mt-1">
+                        Tebak jeneng tokoh wayang saka gambar siluet ing njero kaca pembesar! Membuka 'Kata Kunci Bantu' bakal ngurangi skor (-20 Poin).
+                    </p>
+                </div>
+            </div>
+
+            <!-- Central Silhouette Display + Hidden Clues Area -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 my-6 items-center">
+                <!-- Left/Center: Magnifying Glass Silhouette Frame -->
+                <div class="md:col-span-5 flex justify-center py-4">
+                    <div class="relative flex items-center justify-center my-4">
+                        <!-- Detective Magnifying Glass Outer Frame -->
+                        <div class="magnifier-outer-frame transform hover:scale-105 transition duration-300">
+                            <div class="push-pin absolute -top-1 left-1/2 -translate-x-1/2 z-20"></div>
+                            
+                            <!-- Lens Glass Container -->
+                            <div class="magnifier-lens-inner flex items-center justify-center p-2">
+                                <img id="lvl1-silhouette-img" 
+                                     src="" 
+                                     alt="Siluet Wayang Close-Up" 
+                                     class="w-full h-full object-contain silhouetted-img reveal-20"
+                                     onerror="handleSilhouetteError(this);" />
+                                <div id="lvl1-reveal-badge" class="absolute bottom-3 bg-woodBrown/90 backdrop-blur text-amber-200 text-[11px] font-typewriter px-3 py-1 rounded-full border border-amber-500 shadow-md z-20">
+                                    <i class="fa-solid fa-magnifying-glass text-badgeGold mr-1"></i> Siluet: 20%
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3D Wood Handle -->
+                        <div class="magnifier-handle"></div>
+                    </div>
+                </div>
+
+                <!-- Right: Clues & Information -->
+                <div class="md:col-span-7 space-y-4">
+                    <div class="bg-gradient-to-br from-amber-900/15 to-amber-800/10 p-5 rounded-2xl border-2 border-amber-900/30 shadow-md">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-detective font-bold text-woodBrown text-base flex items-center gap-2">
+                                <i class="fa-solid fa-key text-vintageRed text-lg"></i> Kata Kunci Bantu (Tersembunyi):
+                            </h4>
+                        </div>
+                        <div id="lvl1-clues-container" class="space-y-2.5">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Answer Options & Next Button -->
+            <div class="bg-amber-900/15 rounded-2xl p-4 border-2 border-amber-900/30 flex flex-col md:flex-row items-center justify-between gap-4 shadow-inner">
+                <div class="w-full">
+                    <span class="text-xs font-bold text-amber-950 uppercase block mb-2 font-detective tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-vintageRed"></i> Pilihan Jawaban Kelompok Aktif:
+                    </span>
+                    <div id="lvl1-options" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <!-- Dynamic Buttons -->
+                    </div>
+                </div>
+                <button onclick="nextLvl1Question()" id="lvl1-next-btn" class="hidden w-full md:w-auto bg-gradient-to-r from-vintageRed to-red-800 hover:from-red-700 hover:to-red-900 text-amber-100 font-detective font-bold px-6 py-3 rounded-xl shadow-xl border-2 border-red-950 transition flex items-center justify-center gap-2 whitespace-nowrap">
+                    Soal Acak Berikutnya <i class="fa-solid fa-shuffle"></i>
+                </button>
+            </div>
+        </section>
+
+
+        <!-- ==================== LEVEL 2: GOLEK GAMAN & PRAJA ==================== -->
+        <section id="level-2-container" class="parchment-card rounded-2xl p-4 md:p-8 relative min-h-[560px] hidden flex flex-col justify-between">
+            <!-- Header -->
+            <div class="flex flex-wrap justify-between items-start border-b-2 border-amber-900/20 pb-3 gap-4">
+                <div>
+                    <h2 class="font-detective text-xl md:text-3xl text-woodBrown font-bold">Misi 2: Golek Gaman & Praja (4 Tokoh Acak)</h2>
+                    <p class="text-sm md:text-base text-amber-900/90 font-typewriter mt-1">
+                        Tarik garis benang abang saka <b>Ciri Physical</b> menyang <b>Nami Wayang</b>, banjur menyang <b>Gaman lan Prajane!</b>
+                    </p>
+                </div>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="generateRandomLvl2Set()" class="bg-amber-800 hover:bg-amber-700 text-amber-100 border border-amber-900/40 px-3 py-2 rounded-xl text-xs font-bold font-detective transition">
+                        <i class="fa-solid fa-shuffle"></i> Acak 4 Tokoh Baru
+                    </button>
+                    <button onclick="resetLevel2Connections()" class="bg-amber-800/20 hover:bg-amber-800/30 text-amber-950 border border-amber-900/40 px-3 py-2 rounded-xl text-xs font-bold font-detective transition">
+                        <i class="fa-solid fa-rotate-left"></i> Reset Garis
+                    </button>
+                    <button onclick="verifyLevel2Answers()" class="bg-vintageRed hover:bg-red-800 text-amber-100 font-detective font-bold px-5 py-2 rounded-xl shadow-md text-sm transition">
+                        <i class="fa-solid fa-circle-check"></i> Periksa Jawaban (+150 Poin)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Board Matching Canvas Wrapper -->
+            <div class="relative my-4 flex-1 bg-amber-950/10 rounded-xl p-3 border border-amber-900/30 min-h-[420px]" id="matching-board-wrapper">
+                <!-- Red Canvas for Strings -->
+                <canvas id="stringCanvas"></canvas>
+
+                <!-- 3 Columns matching image reference layout -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 h-full relative z-10">
+                    <!-- Column 1: CIRI -->
+                    <div class="bg-amber-800/10 rounded-xl p-3 border border-amber-900/20 flex flex-col justify-around gap-2">
+                        <h3 class="text-center font-detective font-bold text-lg text-woodBrown border-b border-amber-900/30 pb-1">Ciri</h3>
+                        <div id="col-ciri-container" class="space-y-2 flex-1 flex flex-col justify-around">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Column 2: NAMI -->
+                    <div class="bg-amber-800/10 rounded-xl p-3 border border-amber-900/20 flex flex-col justify-around gap-2">
+                        <h3 class="text-center font-detective font-bold text-lg text-woodBrown border-b border-amber-900/30 pb-1">Nami</h3>
+                        <div id="col-nami-container" class="space-y-2 flex-1 flex flex-col justify-around">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Column 3: GAMAN & PRAJA -->
+                    <div class="bg-amber-800/10 rounded-xl p-3 border border-amber-900/20 flex flex-col justify-around gap-2">
+                        <h3 class="text-center font-detective font-bold text-lg text-woodBrown border-b border-amber-900/30 pb-1">Gaman & Praja</h3>
+                        <div id="col-gaman-container" class="space-y-2 flex-1 flex flex-col justify-around">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Note -->
+            <div class="flex justify-between items-center text-xs text-amber-900 font-typewriter">
+                <span><i class="fa-solid fa-circle-info"></i> Klik pin bundar di kartu Ciri fisik, lalu klik pin di Nami Tokoh, lalu hubungkan ke Gaman & Praja!</span>
+                <span class="stamp-confidential px-2 py-0.5 text-xs font-bold">CONFIDENTIAL</span>
+            </div>
+        </section>
+
+
+        <!-- ==================== LEVEL 3: ARENA JAWARA ==================== -->
+        <section id="level-3-container" class="parchment-card rounded-2xl p-4 md:p-8 relative min-h-[540px] hidden flex flex-col justify-between">
+            <!-- Header -->
+            <div class="flex flex-wrap justify-between items-center border-b-2 border-amber-900/20 pb-4 gap-4">
+                <div>
+                    <div class="stamp-confidential inline-block px-3 py-1 font-bold text-xl mb-1">
+                        MISI 3 : ARENA JAWARA
+                    </div>
+                    <h2 class="font-detective text-xl md:text-3xl text-woodBrown font-bold">Kuis Real-Time 9 Tokoh Wayang</h2>
+                    <p class="text-xs md:text-sm text-amber-900/90 font-typewriter">
+                        Soal diacak otomatis nalika ganti giliran kelompok. Jawaban Benar (+100 Poin), Salah (-30 Poin).
+                    </p>
+                </div>
+
+                <!-- Timer Display -->
+                <div class="bg-woodBrown text-amber-100 px-5 py-2 rounded-2xl border-2 border-amber-700 flex items-center gap-3 shadow-lg">
+                    <i class="fa-solid fa-stopwatch text-2xl text-amber-400"></i>
+                    <div>
+                        <div class="text-[10px] uppercase tracking-widest text-amber-300 font-bold">Waktu Menjawab</div>
+                        <div id="quiz-timer" class="text-2xl font-black font-detective text-white">20 Detik</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Display Area -->
+            <div class="my-6 bg-amber-100/60 rounded-2xl p-6 border-2 border-amber-900/30 shadow-inner">
+                <div class="flex items-center justify-between mb-4">
+                    <span id="lvl3-question-badge" class="bg-amber-900 text-amber-100 text-xs px-3 py-1 rounded-full font-bold">Soal Acak 1</span>
+                    <span id="lvl3-target-group" class="bg-amber-700 text-amber-100 text-xs px-3 py-1 rounded-full font-bold">Giliran: Kelompok 1</span>
+                </div>
+
+                <!-- Question Text -->
+                <h3 id="lvl3-question-text" class="text-lg md:text-2xl font-bold font-detective text-woodBrown text-center py-4">
+                    Loading Pertanyaan...
+                </h3>
+
+                <!-- Multiple Choice Grid -->
+                <div id="lvl3-options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    <!-- Dynamic Buttons JS -->
+                </div>
+            </div>
+
+            <!-- Action Controls & Leaderboard View Launcher -->
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <button onclick="nextLvl3Question()" id="lvl3-next-btn" class="bg-woodBrown hover:bg-amber-950 text-amber-100 font-detective font-bold px-6 py-2.5 rounded-xl text-sm border border-amber-700 transition">
+                    Acak Soal / Ganti Giliran <i class="fa-solid fa-forward"></i>
+                </button>
+                
+                <button onclick="openProjectorLeaderboard()" class="bg-amber-600 hover:bg-amber-700 text-white font-detective font-bold px-6 py-2.5 rounded-xl text-sm shadow-xl border-2 border-amber-300 transition pulse-animation">
+                    <i class="fa-solid fa-desktop"></i> Buka Mode Proyektor Final Leaderboard
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER INFO -->
+    <footer class="max-w-7xl w-full mx-auto mt-4 text-center text-amber-200/70 text-xs font-typewriter">
+        Satria Mudha Wayang Quest • Media Gamifikasi Pembelajaran Bahasa Daerah / Budaya Jawa Interaktif
+    </footer>
+
+    <!-- DYNAMIC BUBBLE NOTIFICATION CONTAINER -->
+    <div id="game-bubble-toast" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none hidden">
+        <!-- Injected via JS -->
+    </div>
+
+
+    <!-- ==================== MODAL: PROJECTOR LEADERBOARD & BADGE CEREMONY ==================== -->
+    <div id="leaderboard-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex flex-col items-center justify-center p-4">
+        <div class="bg-woodBrown border-4 border-amber-500 rounded-3xl p-6 md:p-10 max-w-4xl w-full shadow-2xl text-amber-100 relative overflow-hidden">
+            <!-- Header -->
+            <div class="text-center mb-6">
+                <div class="stamp-confidential inline-block px-4 py-1 text-2xl font-bold mb-2 text-amber-300 border-amber-300">
+                    PAPAN SKOR PROYEKTOR UTAMA
+                </div>
+                <h2 class="font-detective text-2xl md:text-4xl text-amber-200 font-black tracking-wider">
+                    UPACARA LENCANA SATRIYA MUDHA
+                </h2>
+                <p class="text-amber-300/80 text-xs md:text-sm font-typewriter mt-1">
+                    Hasil Akhir Analisis Tokoh Wayang 5 Kelompok Satriya
+                </p>
+            </div>
+
+            <!-- Leaderboard Rankings Grid -->
+            <div id="projector-rankings" class="space-y-3 my-6">
+                <!-- Javascript will inject sorted group standings with badges -->
+            </div>
+
+            <!-- Footer Modal Buttons -->
+            <div class="flex justify-between items-center mt-8 pt-4 border-t border-amber-800">
+                <button onclick="closeProjectorLeaderboard()" class="bg-amber-900 hover:bg-amber-800 text-amber-200 px-5 py-2.5 rounded-xl font-bold font-detective text-sm border border-amber-700">
+                    <i class="fa-solid fa-xmark"></i> Tutup Mode Proyektor
+                </button>
+                <button onclick="celebrateWinners()" class="bg-badgeGold hover:bg-amber-500 text-woodBrown px-6 py-2.5 rounded-xl font-bold font-detective text-sm shadow-xl border border-amber-200">
+                    <i class="fa-solid fa-award"></i> Berikan Badge & Selebrasi Konfeti
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== JAVASCRIPT GAME LOGIC ==================== -->
+    <script>
+        /* ==================== STATE MANAGEMENT ==================== */
+        let activeGroupIndex = 0; // 0 to 4 (Kelompok 1 to 5)
+        let soundEnabled = true;
+
+        // External Music File Path (full time background music loop)
+        const backsoundAudioFile = "wayang_backsound.mp3";
+        let bgAudioElement = null;
+        let isBgmPlaying = false;
+
+        // Group Scores & Badges
+        const groups = [
+            { id: 1, name: "Kelompok 1", score: 0, badge: false },
+            { id: 2, name: "Kelompok 2", score: 0, badge: false },
+            { id: 3, name: "Kelompok 3", score: 0, badge: false },
+            { id: 4, name: "Kelompok 4", score: 0, badge: false },
+            { id: 5, name: "Kelompok 5", score: 0, badge: false }
+        ];
+
+        /* TRACK ANSWERED / SOLVED CHARACTERS ACROSS LEVELS */
+        let answeredLvl1Ids = new Set();
+        let answeredLvl3Questions = new Set();
+
+        /* LEVEL 3 POOL STATE */
+        let lvl3QuestionsList = [];
+        let lvl3CurrentIndex = 0;
+
+        // Background Music Simulator / Player Helper
+        function playGamificationBgm() {
+            if (!soundEnabled) return;
+            try {
+                if (!bgAudioElement) {
+                    bgAudioElement = new Audio(backsoundAudioFile);
+                    bgAudioElement.loop = true;
+                    bgAudioElement.volume = 0.4;
+                }
+                bgAudioElement.play().then(() => {
+                    isBgmPlaying = true;
+                }).catch(() => {
+                    // Browser policy fallback or file missing handled silently
+                    isBgmPlaying = false;
+                });
+            } catch (e) {
+                isBgmPlaying = false;
+            }
+        }
+
+        /* MASTER DATA FOR 9 WAYANG CHARACTERS (5 PANDAWA & 4 KURAWA) - EXACT FROM USER TABLE */
+        const wayangMasterData = [
+            {
+                id: "puntadewa",
+                name: "Yudistira (Puntadewa)",
+                groupType: "Pandawa",
+                fileName: "wayang_siluet_puntadewa.png",
+                ciri: "Tubuh ramping, wajah tenang, busana anggun (Tenang - Jujur)",
+                gamanPraja: "Jamus Kalimasada / Panah Karawelang - Amarta",
+                clues: [
+                    "Tubuh ramping, wajah tenang, busana anggun",
+                    "Watak utama: Bijaksana, jujur, lan pemimpin",
+                    "Kata kunci: TENANG - JUJUR (Pusaka Jamus Kalimasada)"
+                ]
+            },
+            {
+                id: "werkudara",
+                name: "Bima (Werkudara)",
+                groupType: "Pandawa",
+                fileName: "wayang_siluet_werkudara.png",
+                ciri: "Tubuh besar & kekar, wajah tegas, kain poleng (Besar - Kuat)",
+                gamanPraja: "Kuku Pancanaka / Gada Rungkit - Jodhipati",
+                clues: [
+                    "Tubuh besar & kekar, wajah tegas, kain poleng",
+                    "Nganggo kain poleng lan Kuku Pancanaka / Gada Lukitasari",
+                    "Kata kunci: BESAR - KUAT (Kesatria Jodhipati)"
+                ]
+            },
+            {
+                id: "janaka",
+                name: "Arjuna (Janaka)",
+                groupType: "Pandawa",
+                fileName: "wayang_siluet_janaka.png",
+                ciri: "Tubuh ramping, wajah tampan, ahli memanah (Halus - Memanah)",
+                gamanPraja: "Panah Pasopati / Keris Kalanadha - Madukara",
+                clues: [
+                    "Tubuh ramping, wajah tampan, ahli memanah",
+                    "Gawa Panah Pasopati / Keris Kalanadha",
+                    "Kata kunci: HALUS - MEMANAH (Kesatria Madukara)"
+                ]
+            },
+            {
+                id: "nakula",
+                name: "Nakula",
+                groupType: "Pandawa",
+                fileName: "wayang_siluet_nakula.png",
+                ciri: "Tubuh ramping, wajah rupawan, rapi lan terampil (Rupawan - Terampil)",
+                gamanPraja: "Panah Pedang / Cundamanik - Sawojajar",
+                clues: [
+                    "Tubuh ramping, wajah rupawan, rapi lan terampil",
+                    "Watak utama: Setia, terampil, merawat kuda",
+                    "Gaman: Panah Pedang / Cundamanik (Sawojajar)"
+                ]
+            },
+            {
+                id: "sadewa",
+                name: "Sadewa (Sahadewa)",
+                groupType: "Pandawa",
+                fileName: "wayang_siluet_sadewa.png",
+                ciri: "Tubuh ramping, wajah cerdas, pembawaan tenang (Cerdas - Bijak)",
+                gamanPraja: "Pedang Kalavanya - Bawana Rata / Sawojajar",
+                clues: [
+                    "Tubuh ramping, wajah cerdas, pembawaan tenang",
+                    "Watak utama: Cerdas, teliti, lan bijaksana",
+                    "Gaman: Pedang Kalavanya (Bawana Rata / Sawojajar)"
+                ]
+            },
+            {
+                id: "duryudana",
+                name: "Prabu Duryudana",
+                groupType: "Kurawa",
+                fileName: "wayang_siluet_duryudana.png",
+                ciri: "Wajah gagah, mata kedelai nunut, mahkota gelung supit urang, busana batik parang",
+                gamanPraja: "Gada Kyai Inten / Raja Astinapura - Astinapura",
+                clues: [
+                    "Wajah gagah, mata kedelai nunut (tajam)",
+                    "Mahkota gelung supit urang / praba, busana raja mewah (batik parang)",
+                    "Gaman: Gada Kyai Inten - Raja Astinapura (Gajahoya)"
+                ]
+            },
+            {
+                id: "dursasana",
+                name: "Pangeran Dursasana",
+                groupType: "Kurawa",
+                fileName: "wayang_siluet_dursasana.png",
+                ciri: "Muka merah (pemarah), mata telengan, rambut gimbal, postur tinggi besar",
+                gamanPraja: "Gada / Kesatria Kejam - Banjarjungut",
+                clues: [
+                    "Muka merah (pemarah & angkara), mata telengan / melotot",
+                    "Rambut gimbal / ikal ke belakang, postur tinggi besar",
+                    "Peran: Kesatria Kejam - Praja Banjarjungut"
+                ]
+            },
+            {
+                id: "durmagati",
+                name: "Raden Durmagati",
+                groupType: "Kurawa",
+                fileName: "wayang_siluet_durmagati.png",
+                ciri: "Wajah licik, hidung gandhewa, mata melotot, postur gempal membongkok",
+                gamanPraja: "Keris / Provokator Ulung - Awu-Awu Pakel",
+                clues: [
+                    "Wajah licik, hidung gandhewa, mata melotot lebar",
+                    "Rambut ikal lebat belakang, postur gempal membongkok",
+                    "Peran: Keris / Provokator Ulung - Awu-Awu Pakel"
+                ]
+            },
+            {
+                id: "citraksi",
+                name: "Raden Citraksi",
+                groupType: "Kurawa",
+                fileName: "wayang_siluet_citraksi.png",
+                ciri: "Muka putih/biru muda cerah, mata sipit tajam, hidung lancip, postur ramping",
+                gamanPraja: "Tombak / Pengawal Istana - Tirtawadas",
+                clues: [
+                    "Muka warna putih / biru muda cerah, mata sipit tajam, hidung lancip",
+                    "Mahkota tekes / gelung sedang, postur ramping",
+                    "Peran: Tombak / Pengawal Istana - Praja Tirtawadas"
+                ]
+            }
+        ];
+
+        /* HELPER UTILITIES */
+        function shuffleArray(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                const synth = new Tone.Synth().toDestination();
+                if (type === 'correct') {
+                    synth.triggerAttackRelease("G5", "8n");
+                } else if (type === 'wrong') {
+                    synth.triggerAttackRelease("C3", "8n");
+                } else if (type === 'clue') {
+                    synth.triggerAttackRelease("E4", "8n");
+                } else {
+                    synth.triggerAttackRelease("C5", "8n");
+                }
+            } catch (e) {
+                // Audio context fallback
+            }
+        }
+
+        function toggleAudio() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('audioIcon');
+            if (soundEnabled) {
+                icon.className = "fa-solid fa-volume-high";
+                if (bgAudioElement) bgAudioElement.play().catch(()=>{});
+            } else {
+                icon.className = "fa-solid fa-volume-xmark";
+                if (bgAudioElement) bgAudioElement.pause();
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        function updateScore(amount) {
+            groups[activeGroupIndex].score += amount;
+            if (groups[activeGroupIndex].score < 0) groups[activeGroupIndex].score = 0;
+            if (groups[activeGroupIndex].score >= 150) {
+                groups[activeGroupIndex].badge = true;
+            }
+            renderGroupScores();
+        }
+
+        function showBubbleNotification(message, type, scoreChange) {
+            const toast = document.getElementById('game-bubble-toast');
+            if (!toast) return;
+
+            const isErr = type === 'error';
+            const badgeColor = isErr ? 'bg-red-700 text-white border-red-900' : 'bg-amber-100 text-woodBrown border-amber-500';
+            const badgeScore = scoreChange !== undefined ? `<span class="px-2 py-0.5 rounded-full text-xs font-black ${isErr ? 'bg-red-950 text-red-200' : 'bg-emerald-800 text-white'}">${scoreChange > 0 ? '+' + scoreChange : scoreChange} Poin</span>` : '';
+
+            toast.innerHTML = `
+                <div class="bubble-notification ${badgeColor} border-2 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-detective text-sm md:text-base">
+                    <i class="fa-solid ${isErr ? 'fa-triangle-exclamation text-amber-300' : 'fa-circle-check text-emerald-600'} text-xl"></i>
+                    <div>
+                        <div class="font-bold">${message}</div>
+                    </div>
+                    ${badgeScore}
+                </div>
+            `;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        /* RENDERING TOP GROUP SCORES & TURN SELECTOR */
+        function renderGroupScores() {
+            const container = document.getElementById('group-score-cards');
+            if (!container) return;
+            container.innerHTML = '';
+
+            groups.forEach((g, idx) => {
+                const isActive = idx === activeGroupIndex;
+                const card = document.createElement('div');
+                card.className = `p-2 rounded-xl border flex flex-col items-center justify-center transition ${
+                    isActive ? 'bg-amber-600 border-amber-200 shadow-md scale-105' : 'bg-amber-950/80 border-amber-900 text-amber-200/80'
+                }`;
+                card.innerHTML = `
+                    <span class="text-[10px] font-detective font-bold truncate">${g.name}</span>
+                    <span class="text-sm md:text-lg font-black font-detective text-white">${g.score}</span>
+                `;
+                container.appendChild(card);
+            });
+
+            // Turn selector buttons
+            const turnContainer = document.getElementById('turn-selector-container');
+            if (turnContainer) {
+                turnContainer.innerHTML = '';
+                groups.forEach((g, idx) => {
+                    const isActive = idx === activeGroupIndex;
+                    const btn = document.createElement('button');
+                    btn.className = `px-3 py-1 rounded-lg text-xs font-detective font-bold transition ${
+                        isActive ? 'bg-amber-500 text-woodBrown shadow border border-white' : 'bg-amber-900/60 text-amber-200 hover:bg-amber-800'
+                    }`;
+                    btn.innerText = g.name;
+                    btn.onclick = () => {
+                        activeGroupIndex = idx;
+                        renderGroupScores();
+                        showBubbleNotification(`Giliran beralih ke ${g.name}`, 'info');
+                    };
+                    turnContainer.appendChild(btn);
+                });
+            }
+        }
+
+        /* NAVIGATION LEVEL SWITCHER */
+        function switchLevel(lvlNum) {
+            playSound('click');
+            document.getElementById('level-1-container').classList.add('hidden');
+            document.getElementById('level-2-container').classList.add('hidden');
+            document.getElementById('level-3-container').classList.add('hidden');
+
+            document.getElementById('tab-lvl-1').className = "px-5 py-2.5 rounded-t-xl font-detective font-bold text-sm md:text-base border-t-2 border-x-2 bg-amber-950/40 text-amber-300 border-amber-900";
+            document.getElementById('tab-lvl-2').className = "px-5 py-2.5 rounded-t-xl font-detective font-bold text-sm md:text-base border-t-2 border-x-2 bg-amber-950/40 text-amber-300 border-amber-900";
+            document.getElementById('tab-lvl-3').className = "px-5 py-2.5 rounded-t-xl font-detective font-bold text-sm md:text-base border-t-2 border-x-2 bg-amber-950/40 text-amber-300 border-amber-900";
+
+            if (lvlNum === 1) {
+                document.getElementById('level-1-container').classList.remove('hidden');
+                document.getElementById('tab-lvl-1').className = "px-5 py-2.5 rounded-t-xl font-detective font-bold text-sm md:text-base border-t-2 border-x-2 bg-amber-900 text-amber-100 border-amber-500 shadow-inner";
+                initLevel1();
+            } else if (lvlNum === 2) {
+                document.getElementById('level-2-container').classList.remove('hidden');
+                document.getElementById('tab-lvl-2').className = "px-5 py-2.5 rounded-t-xl font-detective font-bold text-sm md:text-base border-t-2 border-x-2 bg-amber-900 text-amber-100 border-amber-500 shadow-inner";
+                initLevel2();
+            } else if (lvlNum === 3) {
+                document.getElementById('level-3-container').classList.remove('hidden');
+                document.getElementById('tab-lvl-3').className = "px-5 py-2.5 rounded-t-xl font-detective font-bold text-sm md:text-base border-t-2 border-x-2 bg-amber-900 text-amber-100 border-amber-500 shadow-inner";
+                initLevel3();
+                startQuizTimer();
+            }
+        }
+
+        /* ==================== LEVEL 1 LOGIC ==================== */
+        function initLevel1() {
+            let available = wayangMasterData.filter(w => !answeredLvl1Ids.has(w.id));
+            if (available.length === 0) {
+                answeredLvl1Ids.clear();
+                available = [...wayangMasterData];
+            }
+
+            lvl1CurrentObj = shuffleArray(available)[0];
+            lvl1CluesRevealed = [false, false, false];
+            lvl1AttemptCount = 0;
+
+            const imgEl = document.getElementById('lvl1-silhouette-img');
+            imgEl.className = 'w-full h-full object-contain silhouetted-img reveal-20';
+            imgEl.src = lvl1CurrentObj.fileName;
+            
+            updateRevealBadge(20);
+            document.getElementById('lvl1-next-btn').classList.add('hidden');
+
+            const cluesContainer = document.getElementById('lvl1-clues-container');
+            cluesContainer.innerHTML = '';
+
+            lvl1CurrentObj.clues.forEach((clueText, index) => {
+                const clueDiv = document.createElement('div');
+                clueDiv.className = "bg-amber-100/70 p-3 rounded-xl border border-amber-900/30 flex items-center justify-between transition shadow-sm";
+                clueDiv.id = `lvl1-clue-item-${index}`;
+
+                const textSpan = document.createElement('span');
+                textSpan.className = "font-typewriter text-xs md:text-sm text-woodBrown font-bold";
+                textSpan.innerText = `Kata Kunci ${index + 1}: ${lvl1CluesRevealed[index] ? clueText : "•••••••••••••••••••• (Tersembunyi)"}`;
+                clueDiv.appendChild(textSpan);
+
+                if (!lvl1CluesRevealed[index]) {
+                    const revealBtn = document.createElement('button');
+                    revealBtn.className = "investigation-btn text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 font-detective font-bold";
+                    revealBtn.innerHTML = `<i class="fa-solid fa-eye text-amber-300"></i> Buka (-20 Poin)`;
+                    revealBtn.onclick = () => revealLvl1Clue(index, clueText);
+                    clueDiv.appendChild(revealBtn);
+                }
+
+                cluesContainer.appendChild(clueDiv);
+            });
+
+            const optionsContainer = document.getElementById('lvl1-options');
+            optionsContainer.innerHTML = '';
+            
+            const distractors = shuffleArray(wayangMasterData.filter(w => w.id !== lvl1CurrentObj.id)).slice(0, 3);
+            const allOptions = shuffleArray([lvl1CurrentObj, ...distractors]);
+
+            allOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "detective-choice-btn font-bold font-detective py-3 px-2 rounded-xl text-xs md:text-sm border-2 shadow transition flex items-center justify-center text-center";
+                btn.innerText = opt.name;
+                btn.onclick = () => checkLvl1Answer(opt.name, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function updateRevealBadge(percent) {
+            const badge = document.getElementById('lvl1-reveal-badge');
+            if (badge) {
+                badge.innerHTML = `<i class="fa-solid fa-magnifying-glass text-badgeGold mr-1"></i> Siluet: ${percent}%`;
+            }
+        }
+
+        function advanceSilhouetteReveal() {
+            lvl1AttemptCount++;
+            const imgEl = document.getElementById('lvl1-silhouette-img');
+            if (!imgEl) return;
+
+            imgEl.classList.remove('reveal-20', 'reveal-50', 'reveal-70', 'reveal-100');
+
+            if (lvl1AttemptCount === 1) {
+                imgEl.classList.add('reveal-50');
+                updateRevealBadge(50);
+            } else if (lvl1AttemptCount === 2) {
+                imgEl.classList.add('reveal-70');
+                updateRevealBadge(70);
+            } else {
+                imgEl.classList.add('reveal-100');
+                updateRevealBadge(100);
+            }
+        }
+
+        function revealLvl1Clue(index, clueText) {
+            playSound('clue');
+            updateScore(-20);
+            lvl1CluesRevealed[index] = true;
+            advanceSilhouetteReveal();
+
+            const item = document.getElementById(`lvl1-clue-item-${index}`);
+            if (item) {
+                item.innerHTML = `
+                    <span class="font-typewriter text-xs md:text-sm text-amber-950 font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-check text-emerald-700"></i> Kata Kunci ${index + 1}: ${clueText}
+                    </span>
+                    <span class="text-[10px] bg-red-800 text-amber-100 px-2 py-0.5 rounded-full font-bold font-detective">-20 Poin</span>
+                `;
+            }
+        }
+
+        function checkLvl1Answer(selected, btnElement) {
+            if (selected === lvl1CurrentObj.name) {
+                playSound('correct');
+                updateScore(100);
+                answeredLvl1Ids.add(lvl1CurrentObj.id);
+                
+                const imgEl = document.getElementById('lvl1-silhouette-img');
+                imgEl.className = 'w-full h-full object-contain revealed-img';
+                updateRevealBadge(100);
+
+                // Disable all option buttons after correct answer to prevent repeated clicking
+                document.querySelectorAll('#lvl1-options button').forEach(b => {
+                    b.disabled = true;
+                    b.classList.add('opacity-70', 'cursor-not-allowed');
+                });
+
+                confetti({ particleCount: 60, spread: 70, origin: { y: 0.7 } });
+                showBubbleNotification(`Jawaban Benar! ${groups[activeGroupIndex].name} mendapat +100 Poin!`, 'success', 100);
+                document.getElementById('lvl1-next-btn').classList.remove('hidden');
+            } else {
+                playSound('wrong');
+                updateScore(-30);
+                advanceSilhouetteReveal();
+                
+                // Disable only the clicked wrong button
+                if (btnElement) {
+                    btnElement.disabled = true;
+                    btnElement.classList.add('opacity-50', 'bg-red-200', 'cursor-not-allowed');
+                }
+
+                showBubbleNotification(`Jawaban Salah! Skor ${groups[activeGroupIndex].name} berkurang`, 'error', -30);
+            }
+        }
+
+        function nextLvl1Question() {
+            initLevel1();
+        }
+
+        /* ==================== LEVEL 2 LOGIC ==================== */
+        function initLevel2() {
+            generateRandomLvl2Set();
+        }
+
+        // Global Level 2 State Variables
+        let lvl2ActiveQuintet = [];
+        let userConnections = []; // Stores array of { fromCol, fromId, fromSide, toCol, toId, toSide }
+        let selectedPin = null;
+
+        function generateRandomLvl2Set() {
+            lvl2ActiveQuintet = shuffleArray([...wayangMasterData]).slice(0, 4);
+            userConnections = [];
+            selectedPin = null;
+
+            const ciriContainer = document.getElementById('col-ciri-container');
+            const namiContainer = document.getElementById('col-nami-container');
+            const gamanContainer = document.getElementById('col-gaman-container');
+
+            if (!ciriContainer || !namiContainer || !gamanContainer) return;
+
+            ciriContainer.innerHTML = '';
+            namiContainer.innerHTML = '';
+            gamanContainer.innerHTML = '';
+
+            const shuffledCiri = shuffleArray([...lvl2ActiveQuintet]);
+            const shuffledNami = shuffleArray([...lvl2ActiveQuintet]);
+            const shuffledGaman = shuffleArray([...lvl2ActiveQuintet]);
+
+            shuffledCiri.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "parchment-card p-3 rounded-xl border border-amber-900/40 relative shadow-sm text-xs font-typewriter text-woodBrown flex items-center justify-between cursor-pointer hover:border-amber-600";
+                card.onclick = () => {
+                    const pin = card.querySelector('.push-pin');
+                    if (pin) handlePinClick('ciri', item.id, 'right', pin);
+                };
+                card.innerHTML = `
+                    <div class="font-bold pr-4 pointer-events-none">${item.ciri}</div>
+                    <div id="pin-ciri-right-${item.id}" class="push-pin cursor-pointer shrink-0 transition-transform hover:scale-125" onclick="event.stopPropagation(); handlePinClick('ciri', '${item.id}', 'right', this)"></div>
+                `;
+                ciriContainer.appendChild(card);
+            });
+
+            shuffledNami.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "parchment-card p-3 rounded-xl border border-amber-900/40 relative shadow-sm text-xs font-typewriter text-woodBrown flex items-center justify-between cursor-pointer hover:border-amber-600";
+                card.onclick = () => {
+                    const side = (selectedPin && selectedPin.colType === 'ciri') ? 'left' : 'right';
+                    const pin = document.getElementById(`pin-nami-${side}-${item.id}`);
+                    if (pin) handlePinClick('nami', item.id, side, pin);
+                };
+                card.innerHTML = `
+                    <div id="pin-nami-left-${item.id}" class="push-pin cursor-pointer shrink-0 transition-transform hover:scale-125" onclick="event.stopPropagation(); handlePinClick('nami', '${item.id}', 'left', this)"></div>
+                    <div class="font-bold text-center px-2 flex-1 pointer-events-none">${item.name}</div>
+                    <div id="pin-nami-right-${item.id}" class="push-pin cursor-pointer shrink-0 transition-transform hover:scale-125" onclick="event.stopPropagation(); handlePinClick('nami', '${item.id}', 'right', this)"></div>
+                `;
+                namiContainer.appendChild(card);
+            });
+
+            shuffledGaman.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "parchment-card p-3 rounded-xl border border-amber-900/40 relative shadow-sm text-xs font-typewriter text-woodBrown flex items-center justify-between cursor-pointer hover:border-amber-600";
+                card.onclick = () => {
+                    const pin = card.querySelector('.push-pin');
+                    if (pin) handlePinClick('gaman', item.id, 'left', pin);
+                };
+                card.innerHTML = `
+                    <div id="pin-gaman-left-${item.id}" class="push-pin cursor-pointer shrink-0 transition-transform hover:scale-125" onclick="event.stopPropagation(); handlePinClick('gaman', '${item.id}', 'left', this)"></div>
+                    <div class="font-bold pl-4 pointer-events-none">${item.gamanPraja}</div>
+                `;
+                gamanContainer.appendChild(card);
+            });
+
+            setTimeout(drawStrings, 100);
+        }
+
+        function handlePinClick(colType, id, side, pinEl) {
+            playSound('click');
+            
+            // Unselect if clicking the exact same pin twice
+            if (selectedPin && selectedPin.element === pinEl) {
+                pinEl.classList.remove('glow-active');
+                selectedPin = null;
+                return;
+            }
+
+            if (!selectedPin) {
+                // First selection: Highlight pin
+                selectedPin = { colType, id, side, element: pinEl };
+                pinEl.classList.add('glow-active');
+            } else {
+                // Second selection check
+                if (selectedPin.colType === colType) {
+                    showBubbleNotification("Pilihlah pin saka kolom beda!", "error");
+                    selectedPin.element.classList.remove('glow-active');
+                    selectedPin = { colType, id, side, element: pinEl };
+                    pinEl.classList.add('glow-active');
+                    return;
+                }
+
+                // Strictly require Ciri <-> Nami or Nami <-> Gaman
+                const isCiriNami = (selectedPin.colType === 'ciri' && colType === 'nami') || (selectedPin.colType === 'nami' && colType === 'ciri');
+                const isNamiGaman = (selectedPin.colType === 'nami' && colType === 'gaman') || (selectedPin.colType === 'gaman' && colType === 'nami');
+
+                if (!isCiriNami && !isNamiGaman) {
+                    showBubbleNotification("Hubungkan Ciri menyang Nami, banjur Nami menyang Gaman & Praja!", "error");
+                    selectedPin.element.classList.remove('glow-active');
+                    selectedPin = null;
+                    return;
+                }
+
+                // Determine directional mapping (From left column to right column)
+                let sourceCol = selectedPin.colType;
+                let sourceId = selectedPin.id;
+                let sourceSide = selectedPin.side;
+                let targetCol = colType;
+                let targetId = id;
+                let targetSide = side;
+
+                if ((selectedPin.colType === 'nami' && colType === 'ciri') || (selectedPin.colType === 'gaman' && colType === 'nami')) {
+                    sourceCol = colType;
+                    sourceId = id;
+                    sourceSide = side;
+                    targetCol = selectedPin.colType;
+                    targetId = selectedPin.id;
+                    targetSide = selectedPin.side;
+                }
+
+                // Reject duplicate: Check if source or target pin is ALREADY connected in this specific column pair
+                const existingPairConn = userConnections.find(conn => 
+                    (conn.fromCol === sourceCol && conn.toCol === targetCol) && 
+                    (conn.fromId === sourceId || conn.toId === targetId)
+                );
+
+                if (existingPairConn) {
+                    // Remove the old duplicate line so user can re-assign cleanly
+                    userConnections = userConnections.filter(c => c !== existingPairConn);
+                }
+
+                // Add clean single connection
+                userConnections.push({
+                    fromCol: sourceCol,
+                    fromId: sourceId,
+                    fromSide: sourceSide,
+                    toCol: targetCol,
+                    toId: targetId,
+                    toSide: targetSide
+                });
+
+                selectedPin.element.classList.remove('glow-active');
+                selectedPin = null;
+                drawStrings();
+            }
+        }
+
+        function drawStrings() {
+            const canvas = document.getElementById('stringCanvas');
+            if (!canvas) return;
+            const wrapper = document.getElementById('matching-board-wrapper');
+            if (!wrapper) return;
+            
+            canvas.width = wrapper.clientWidth;
+            canvas.height = wrapper.clientHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const wrapRect = wrapper.getBoundingClientRect();
+
+            userConnections.forEach(conn => {
+                const pin1Id = `pin-${conn.fromCol}-${conn.fromSide}-${conn.fromId}`;
+                const pin2Id = `pin-${conn.toCol}-${conn.toSide}-${conn.toId}`;
+                
+                const el1 = document.getElementById(pin1Id);
+                const el2 = document.getElementById(pin2Id);
+
+                if (el1 && el2) {
+                    const rect1 = el1.getBoundingClientRect();
+                    const rect2 = el2.getBoundingClientRect();
+
+                    const x1 = rect1.left + rect1.width / 2 - wrapRect.left;
+                    const y1 = rect1.top + rect1.height / 2 - wrapRect.top;
+                    const x2 = rect2.left + rect2.width / 2 - wrapRect.left;
+                    const y2 = rect2.top + rect2.height / 2 - wrapRect.top;
+
+                    // Draw red yarn line with shadow
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                    ctx.shadowBlur = 4;
+                    ctx.shadowOffsetY = 2;
+
+                    ctx.strokeStyle = '#b91c1c';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    
+                    const controlX = (x1 + x2) / 2;
+                    const controlY = Math.max(y1, y2) + 12;
+                    ctx.quadraticCurveTo(controlX, controlY, x2, y2);
+                    ctx.stroke();
+
+                    // Pin highlight dots
+                    ctx.fillStyle = '#fef08a';
+                    ctx.beginPath();
+                    ctx.arc(x1, y1, 3, 0, Math.PI * 2);
+                    ctx.arc(x2, y2, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        function resetLevel2Connections() {
+            userConnections = [];
+            if (selectedPin && selectedPin.element) {
+                selectedPin.element.classList.remove('glow-active');
+            }
+            selectedPin = null;
+            drawStrings();
+            showBubbleNotification("Kabeh garis wis di-reset!", "info");
+        }
+
+        function verifyLevel2Answers() {
+            // Must have 4 Ciri -> Nami connections AND 4 Nami -> Gaman connections (Total 8 lines)
+            if (userConnections.length < 8) {
+                showBubbleNotification(`Pasangake kabeh Ciri menyang Nami lan Gaman! (${userConnections.length}/8 Garis)`, 'error');
+                return;
+            }
+
+            let correctCount = 0;
+            userConnections.forEach(conn => {
+                if (conn.fromId === conn.toId) correctCount++;
+            });
+
+            if (correctCount >= 8) {
+                playSound('correct');
+                updateScore(150);
+                confetti({ particleCount: 80, spread: 90 });
+                showBubbleNotification(`Hebat! Kabeh 4 tokoh berhasil dijodohake (+150 Poin)`, 'success', 150);
+            } else {
+                playSound('wrong');
+                updateScore(-30);
+                showBubbleNotification(`Masih ada pasangan sing kliru (${correctCount}/8 Garis Benar)`, 'error', -30);
+            }
+        }
+
+        /* Resize canvas dynamically on window resize */
+        window.addEventListener('resize', () => {
+            if (!document.getElementById('level-2-container').classList.contains('hidden')) {
+                drawStrings();
+            }
+        });
+
+        /* ==================== LEVEL 3 LOGIC ==================== */
+        function generateLvl3QuestionsPool() {
+            lvl3QuestionsList = [];
+            wayangMasterData.forEach(item => {
+                // Question 1: Ciri Fisik
+                lvl3QuestionsList.push({
+                    id: `${item.id}-ciri`,
+                    wayangId: item.id,
+                    question: `Sapa tokoh wayang sing nduweni ciri fisik: "${item.ciri}"?`,
+                    correctAnswer: item.name,
+                    options: shuffleArray([
+                        item.name,
+                        ...shuffleArray(wayangMasterData.filter(w => w.id !== item.id).map(w => w.name)).slice(0, 3)
+                    ])
+                });
+
+                // Question 2: Senjata & Kerajaan
+                lvl3QuestionsList.push({
+                    id: `${item.id}-gaman`,
+                    wayangId: item.id,
+                    question: `Apa Senjata (Gaman) lan Kerajaan (Praja) saka tokoh ${item.name}?`,
+                    correctAnswer: item.gamanPraja,
+                    options: shuffleArray([
+                        item.gamanPraja,
+                        ...shuffleArray(wayangMasterData.filter(w => w.id !== item.id).map(w => w.gamanPraja)).slice(0, 3)
+                    ])
+                });
+            });
+            lvl3QuestionsList = shuffleArray(lvl3QuestionsList);
+            lvl3CurrentIndex = 0;
+        }
+
+        function initLevel3() {
+            if (lvl3QuestionsList.length === 0) {
+                generateLvl3QuestionsPool();
+            }
+
+            let availableQuestions = lvl3QuestionsList.filter(q => !answeredLvl3Questions.has(q.id));
+            if (availableQuestions.length === 0) {
+                answeredLvl3Questions.clear();
+                availableQuestions = [...lvl3QuestionsList];
+            }
+
+            const currentQ = availableQuestions[0];
+            lvl3CurrentIndex = lvl3QuestionsList.indexOf(currentQ);
+
+            document.getElementById('lvl3-question-badge').innerText = `Soal ${lvl3CurrentIndex + 1} saka ${lvl3QuestionsList.length}`;
+            document.getElementById('lvl3-target-group').innerText = `Giliran: ${groups[activeGroupIndex].name}`;
+            document.getElementById('lvl3-question-text').innerText = currentQ.question;
+
+            const grid = document.getElementById('lvl3-options-grid');
+            grid.innerHTML = '';
+
+            currentQ.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "detective-choice-btn font-bold font-detective p-4 rounded-xl text-sm border-2 shadow transition hover:scale-102 flex items-center justify-center text-center";
+                btn.innerText = opt;
+                btn.onclick = () => checkLvl3Answer(opt, currentQ, btn);
+                grid.appendChild(btn);
+            });
+        }
+
+        function checkLvl3Answer(selectedOpt, questionObj, btnElement) {
+            clearInterval(quizTimerInterval);
+            
+            // Disable all option buttons immediately after selection
+            document.querySelectorAll('#lvl3-options-grid button').forEach(b => {
+                b.disabled = true;
+                b.classList.add('opacity-70', 'cursor-not-allowed');
+            });
+
+            if (selectedOpt === questionObj.correctAnswer) {
+                playSound('correct');
+                updateScore(100);
+                answeredLvl3Questions.add(questionObj.id);
+                confetti({ particleCount: 70, spread: 80 });
+                showBubbleNotification(`Jawaban Benar! (+100 Poin)`, 'success', 100);
+            } else {
+                playSound('wrong');
+                updateScore(-30);
+                showBubbleNotification(`Jawaban Salah! Kunci: "${questionObj.correctAnswer}"`, 'error', -30);
+            }
+        }
+
+        let quizTimerInterval = null;
+        let quizTimeLeft = 20;
+
+        function resetQuizTimer() {
+            clearInterval(quizTimerInterval);
+            quizTimeLeft = 20;
+            const timerEl = document.getElementById('quiz-timer');
+            if (timerEl) timerEl.innerText = `${quizTimeLeft} Detik`;
+        }
+
+        function startQuizTimer() {
+            resetQuizTimer();
+            quizTimerInterval = setInterval(() => {
+                quizTimeLeft--;
+                const timerEl = document.getElementById('quiz-timer');
+                if (timerEl) timerEl.innerText = `${quizTimeLeft} Detik`;
+                if (quizTimeLeft < 0) {
+                    clearInterval(quizTimerInterval);
+                    playSound('wrong');
+                    updateScore(-30);
+                    showBubbleNotification(`Waktu Habis!`, 'error', -30);
+                }
+            }, 1000);
+        }
+
+        function nextLvl3Question() {
+            initLevel3();
+            startQuizTimer();
+        }
+
+        function openProjectorLeaderboard() {
+            playSound('win');
+            const modal = document.getElementById('leaderboard-modal');
+            modal.classList.remove('hidden');
+
+            const container = document.getElementById('projector-rankings');
+            container.innerHTML = '';
+
+            const sorted = [...groups].sort((a, b) => b.score - a.score);
+
+            sorted.forEach((g, idx) => {
+                const isWinner = (idx === 0);
+                const item = document.createElement('div');
+                item.className = `p-4 rounded-2xl border-2 flex items-center justify-between transition ${
+                    isWinner ? 'bg-gradient-to-r from-amber-500 to-amber-700 text-woodBrown border-amber-200 shadow-2xl scale-102 font-bold' : 'bg-amber-950/70 border-amber-800 text-amber-100'
+                }`;
+
+                const badgeTag = g.badge || g.score >= 150 ? `<span class="bg-badgeGold text-woodBrown text-xs font-bold px-3 py-1 rounded-full shadow border border-amber-200"><i class="fa-solid fa-award"></i> Badge Satriya Mudha</span>` : `<span class="text-xs text-amber-400/60 font-typewriter">Belum Mencapai Badge</span>`;
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full ${isWinner ? 'bg-woodBrown text-amber-300' : 'bg-amber-900 text-amber-200'} font-black text-lg flex items-center justify-center border border-amber-400">
+                            ${idx + 1}
+                        </div>
+                        <div>
+                            <div class="text-base md:text-lg font-bold font-detective">${g.name}</div>
+                            <div class="mt-0.5">${badgeTag}</div>
+                        </div>
+                    </div>
+                    <div class="text-2xl md:text-4xl font-black font-detective tracking-wider">${g.score} <span class="text-xs font-normal font-typewriter">Poin</span></div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function closeProjectorLeaderboard() {
+            playSound('click');
+            document.getElementById('leaderboard-modal').classList.add('hidden');
+        }
+
+        function celebrateWinners() {
+            playSound('win');
+            confetti({ particleCount: 180, spread: 120, origin: { y: 0.6 } });
+        }
+
+        // INITIALIZE ON WINDOW LOAD
+        window.onload = function() {
+            renderGroupScores();
+            switchLevel(1);
+            window.addEventListener('click', () => {
+                if (!isBgmPlaying && soundEnabled) {
+                    playGamificationBgm();
+                }
+            }, { once: true });
+        };
+    </script>
+</body>
+</html>
